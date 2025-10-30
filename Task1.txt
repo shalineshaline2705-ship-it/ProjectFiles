@@ -1,0 +1,229 @@
+            super();
+
+            SalesLine salesLine;
+            InventTable inventTable;
+            InventDim inventDim;
+            CustTable custTable;
+            CustAccount custAccount;
+            Anchorage anchoringexists, anchoringSalesLineCreation;
+            SupplementalTable supplementalexists, supplementalSalesLineCreation;
+            BargesTable bargesexists, bargesSalesLineCreation;
+            SecurityTable securityfeeexists, securityFeeSalesLineCreation;
+            NumberSeq numberSeq;
+            SalesId salesId;
+            boolean hasBillFacility = false, hasBillAgent = false;
+
+            ttsBegin;
+
+            SalesTable.clear();
+            terminalTable = TerminalTable_DS.cursor();
+
+            // Check for Agent records in any table
+            select firstOnly * from anchoringExists
+    where anchoringExists.BillToAgent == BillToAgent::BillAgent;
+            hasBillAgent = hasBillAgent || (anchoringExists ? true : false);
+ 
+            select firstOnly * from supplementalExists
+    where supplementalExists.BillToAgent == BillToAgent::BillAgent;
+            hasBillAgent = hasBillAgent || (supplementalExists ? true : false);
+ 
+            select firstOnly * from bargesExists
+    where bargesExists.BillToAgent == BillToAgent::BillAgent;
+            hasBillAgent = hasBillAgent || (bargesExists ? true : false);
+ 
+            select firstOnly * from securityFeeExists
+    where securityFeeExists.BillToAgent == BillToAgent::BillAgent;
+            hasBillAgent = hasBillAgent || (securityFeeExists ? true : false);
+ 
+            // Check for Facility records in any table
+            select firstOnly * from anchoringExists
+    where anchoringExists.BillToAgent == BillToAgent::BillFacility;
+            hasBillFacility = hasBillFacility || (anchoringExists ? true : false);
+ 
+            select firstOnly * from supplementalExists
+    where supplementalExists.BillToAgent == BillToAgent::BillFacility;
+            hasBillFacility = hasBillFacility || (supplementalExists ? true : false);
+ 
+            select firstOnly * from bargesExists
+    where bargesExists.BillToAgent == BillToAgent::BillFacility;
+            hasBillFacility = hasBillFacility || (bargesExists ? true : false);
+ 
+            select firstOnly * from securityFeeExists
+    where securityFeeExists.BillToAgent == BillToAgent::BillFacility;
+            hasBillFacility = hasBillFacility || (securityFeeExists ? true : false);
+ 
+            // =============== BillFacility Section =================
+            if (hasBillFacility)
+            {
+                custAccount = terminalTable.FacilityCode;
+                if (custAccount)
+                {
+                    SalesTable.clear();
+                    SalesTable.initValue();
+                    numberSeq = NumberSeq::newGetNum(SalesParameters::numRefSalesId());
+                    numberSeq.used();
+                    SalesTable.TerminalOperationNumber = numberSeq.num();
+                    salesId = SalesTable.TerminalOperationNumber;
+                    SalesTable.SalesId = salesId;
+                    SalesTable.CustAccount = custAccount;
+                    SalesTable.initFromCustTable();
+                    SalesTable.insert();
+
+                    while select * from anchoringSalesLineCreation where anchoringSalesLineCreation.BillToAgent == BillToAgent::BillFacility
+                    {
+                        inventDim.clear();
+                        inventDim.InventSiteId = '1';
+                        inventDim.InventLocationId = '11';
+                        inventDim = InventDim::findOrCreate(inventDim);
+
+                        salesLine.clear();
+                        salesLine.SalesId = salesId;
+                        salesLine.ItemId = anchoringSalesLineCreation.Services;
+                        salesLine.InventDimId = inventDim.InventDimId;
+                        salesLine.itemIdChanged();
+                        salesLine.insert();
+                    }
+
+                    while select * from supplementalSalesLineCreation where supplementalSalesLineCreation.BillToAgent == BillToAgent::BillFacility
+                    {
+                        inventDim.clear();
+                        inventDim.InventSiteId = '1';
+                        inventDim.InventLocationId = '11';
+                        inventDim = InventDim::findOrCreate(inventDim);
+
+                        salesLine.clear();
+                        salesLine.SalesId = salesId;
+                        salesLine.ItemId = supplementalSalesLineCreation.Services;
+                        salesLine.InventDimId = inventDim.InventDimId;
+                        salesLine.itemIdChanged();
+                        salesLine.insert();
+                    }
+
+                    while select * from bargesSalesLineCreation where bargesSalesLineCreation.BillToAgent == BillToAgent::BillFacility
+                    {
+                        inventDim.clear();
+                        inventDim.InventSiteId = '1';
+                        inventDim.InventLocationId = '11';
+                        inventDim = InventDim::findOrCreate(inventDim);
+
+                        salesLine.clear();
+                        salesLine.SalesId = salesId;
+                        salesLine.ItemId = bargesSalesLineCreation.Services;
+                        salesLine.InventDimId = inventDim.InventDimId;
+                        salesLine.itemIdChanged();
+                        salesLine.insert();
+                    }
+
+                    while select * from securityFeeSalesLineCreation where securityFeeSalesLineCreation.BillToAgent == BillToAgent::BillFacility
+                    {
+                        inventDim.clear();
+                        inventDim.InventSiteId = '1';
+                        inventDim.InventLocationId = '11';
+                        inventDim = InventDim::findOrCreate(inventDim);
+
+                        salesLine.clear();
+                        salesLine.SalesId = salesId;
+                        salesLine.ItemId = securityFeeSalesLineCreation.Services;
+                        salesLine.InventDimId = inventDim.InventDimId;
+                        salesLine.itemIdChanged();
+                        salesLine.insert();
+                    }
+
+                    info(strFmt("Sales order %1 Facility created.", salesId));
+                }
+                else
+                {
+                    error(strFmt("Facility customer account %1 doesn't exist.", custAccount));
+                }
+            }
+
+            // =============== BillAgent Section =================
+            if (hasBillAgent)
+            {
+                custAccount = terminalTable.OwnerAgentCode;
+                if (custAccount)
+                {
+                    SalesTable.clear();
+                    SalesTable.initValue();
+                    numberSeq = NumberSeq::newGetNum(SalesParameters::numRefSalesId());
+                    numberSeq.used();
+                    SalesTable.TerminalOperationNumber = numberSeq.num();
+                    salesId = SalesTable.TerminalOperationNumber;
+                    SalesTable.SalesId = salesId;
+                    SalesTable.CustAccount = custAccount;
+                    SalesTable.initFromCustTable();
+                    SalesTable.insert();
+
+                    while select * from anchoringSalesLineCreation where anchoringSalesLineCreation.BillToAgent == BillToAgent::BillAgent
+                    {
+                        inventDim.clear();
+                        inventDim.InventSiteId = '1';
+                        inventDim.InventLocationId = '11';
+                        inventDim = InventDim::findOrCreate(inventDim);
+
+                        salesLine.clear();
+                        salesLine.SalesId = salesId;
+                        salesLine.ItemId = anchoringSalesLineCreation.Services;
+                        salesLine.InventDimId = inventDim.InventDimId;
+                        salesLine.itemIdChanged();
+                        salesLine.insert();
+                    }
+
+                    while select * from supplementalSalesLineCreation where supplementalSalesLineCreation.BillToAgent == BillToAgent::BillAgent
+                    {
+                        inventDim.clear();
+                        inventDim.InventSiteId = '1';
+                        inventDim.InventLocationId = '11';
+                        inventDim = InventDim::findOrCreate(inventDim);
+
+                        salesLine.clear();
+                        salesLine.SalesId = salesId;
+                        salesLine.ItemId = supplementalSalesLineCreation.Services;
+                        salesLine.InventDimId = inventDim.InventDimId;
+                        salesLine.itemIdChanged();
+                        salesLine.insert();
+                    }
+
+                    while select * from bargesSalesLineCreation where bargesSalesLineCreation.BillToAgent == BillToAgent::BillAgent
+                    {
+                        inventDim.clear();
+                        inventDim.InventSiteId = '1';
+                        inventDim.InventLocationId = '11';
+                        inventDim = InventDim::findOrCreate(inventDim);
+
+                        salesLine.clear();
+                        salesLine.SalesId = salesId;
+                        salesLine.ItemId = bargesSalesLineCreation.Services;
+                        salesLine.InventDimId = inventDim.InventDimId;
+                        salesLine.itemIdChanged();
+                        salesLine.insert();
+                    }
+
+                    while select * from securityFeeSalesLineCreation where securityFeeSalesLineCreation.BillToAgent == BillToAgent::BillAgent
+                    {
+                        inventDim.clear();
+                        inventDim.InventSiteId = '1';
+                        inventDim.InventLocationId = '11';
+                        inventDim = InventDim::findOrCreate(inventDim);
+
+                        salesLine.clear();
+                        salesLine.SalesId = salesId;
+                        salesLine.ItemId = securityFeeSalesLineCreation.Services;
+                        salesLine.InventDimId = inventDim.InventDimId;
+                        salesLine.itemIdChanged();
+                        salesLine.insert();
+                    }
+
+                    info(strFmt("Sales order %1 Agent created.", salesId));
+                }
+                else
+                {
+                    error(strFmt("Agent customer account %1 doesn't exist.", custAccount));
+                }
+            }
+
+            ttsCommit;
+            info("Sales order(s) created successfully.");
+        }
+
+    
